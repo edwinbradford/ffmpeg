@@ -70,23 +70,61 @@ rmdir "mp4" /s /q
 :MakeMp4
 
 mkdir "mp4"
-goto Encode
 
-:Encode
+:Resolution
 
-echo FFmpeg will now encode the source file at multiple bitrates for streaming, press any key to continue... && echo.
+echo Select a listed video resolution:
+echo.
+echo 1. Press [1] for 1080p && echo.
+echo 2. Press [2] for 720p && echo.
+echo 3. Press [3] for 540p && echo.
+echo 4. Press [4] for 360p && echo.
+
+set /p op=Type option:
+if "%op%"=="1" goto m1080p
+if "%op%"=="2" goto m720p
+if "%op%"=="3" goto m540p
+if "%op%"=="4" goto m360p
+
+echo Please select an option:
+goto Resoluion
+
+:m1080p
+
+echo. && echo FFmpeg will now encode the source file at resolutions up to 1080p for streaming, press any key to continue... && echo.
 
 pause > nul
+
+goto 1080p
+
+:m720p
+
+echo. && echo FFmpeg will now encode the source file at resolutions up to 720p for streaming, press any key to continue... && echo.
+
+pause > nul
+
+goto 720p
+
+:m540p
+
+echo. && echo FFmpeg will now encode the source file at resolutions up to 540p for streaming, press any key to continue... && echo.
+
+pause > nul
+
+goto 540p
+
+:m360p
+
+echo. && echo FFmpeg will now encode the source file at resolutions up to 360p for streaming, press any key to continue... && echo.
+
+pause > nul
+
+goto 360p
 
 REM See https://developer.apple.com/streaming/examples/ for bitrate values
 REM MPEG DASH encoding recommendations are CBR or VBR with VBR Max 110% and Buffer double VBR Max
 
-echo Encoding aac_low 160k audio
-ffmpeg -i %input% -vn ^
--metadata:s:a:0 language=eng ^
--profile:a aac_low -ac 2 -b:a 160k ^
--y mp4/00160k_aac_lc.mp4
-echo.
+:1080p
 
 echo Encoding 1080p 7800k
 ffmpeg -i %input% -an ^
@@ -133,6 +171,8 @@ ffmpeg -i %input% -an ^
 -y mp4/04500k_1080p_h264.mp4
 echo.
 
+:720p
+
 echo Encoding 720p 3000k
 ffmpeg -i %input% -an ^
 -movflags +faststart ^
@@ -147,6 +187,8 @@ ffmpeg -i %input% -an ^
 -vstats_file logs/720p_3000k.log ^
 -y mp4/03000k_720p_h264.mp4
 echo.
+
+:540p
 
 echo Encoding 540p 2000k
 ffmpeg -i %input% -an ^
@@ -163,6 +205,8 @@ ffmpeg -i %input% -an ^
 -y mp4/02000k_540p_h264.mp4
 echo.
 
+:360p
+
 echo Encoding 360p 1000k
 ffmpeg -i %input% -an ^
 -movflags +faststart ^
@@ -176,6 +220,13 @@ ffmpeg -i %input% -an ^
 -x264-params rc-lookahead=%GOP%:keyint=%DoubleGOP%:min-keyint=%GOP% ^
 -vstats_file logs/360p_1000k.log ^
 -y mp4/01000k_360p_h264.mp4
+echo.
+
+echo Encoding aac_low 160k audio
+ffmpeg -i %input% -vn ^
+-metadata:s:a:0 language=eng ^
+-profile:a aac_low -ac 2 -b:a 160k ^
+-y mp4/00160k_aac_lc.mp4
 echo.
 
 REM Change the fragment variable from local to global so the next batch file can access it
