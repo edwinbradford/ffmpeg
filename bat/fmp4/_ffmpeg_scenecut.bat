@@ -45,13 +45,14 @@ set /a DoubleGOP=%GOP%*2
 echo The Group of Pictures (GOP) size will be %GOP%. && echo.
 
 REM Check for input directory
-if not exist "mp4" mkdir "mp4" goto Encode
+if not exist "mp4" goto MakeMp4
+if exist "mp4" goto DeleteMp4
+
+:DeleteMp4
 
 REM Alert user
 echo The mp4 directory already exists, all files will be overwritten, is this okay?
 echo.
-
-:DeleteMp4
 
 set /p m="Enter 'y' for yes or 'n' for no: "
 echo.
@@ -64,7 +65,12 @@ goto DeleteMp4
 
 :RemoveMp4
 
-rmdir "mp4" /s /q && mkdir "mp4"
+rmdir "mp4" /s /q
+
+:MakeMp4
+
+mkdir "mp4"
+goto Encode
 
 :Encode
 
