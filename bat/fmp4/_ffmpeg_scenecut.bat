@@ -56,15 +56,17 @@ echo.
 set /p m="Enter 'y' for yes or 'n' for no: "
 echo.
 
-if %m%==y goto Encode
+if %m%==y goto RemoveMp4
 if %m%==n exit
 
 REM If neither of the above
 goto DeleteMp4
 
-:Encode
+:RemoveMp4
 
 rmdir "mp4" /s /q && mkdir "mp4"
+
+:Encode
 
 echo FFmpeg will now encode the source file at multiple bitrates for streaming, press any key to continue... && echo.
 
