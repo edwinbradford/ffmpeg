@@ -6,7 +6,7 @@ pushd "%~dp0"
 echo. && echo %cd% && echo.
 
 REM Title
-echo This batch file encodes video into fmp4 format and generates the MPEG DASH and HLS streams. && echo.
+echo This batch file encodes video into fmp4 format and packages it for streaming as MPEG DASH and HLS. && echo.
 
 REM Check if FFmpeg exists
 for %%x in (ffmpeg.exe) do if not [%%~$PATH:x]==[] goto Python
