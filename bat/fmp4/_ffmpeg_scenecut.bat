@@ -73,7 +73,7 @@ mkdir "mp4"
 
 :Resolution
 
-echo Select a listed video resolution:
+echo Please select a video resolution:
 echo.
 echo 1. Press [1] for 1080p && echo.
 echo 2. Press [2] for 720p && echo.
@@ -171,6 +171,8 @@ ffmpeg -i %input% -an ^
 -y mp4/04500k_1080p_h264.mp4
 echo.
 
+goto Audio
+
 :720p
 
 echo Encoding 720p 3000k
@@ -187,6 +189,8 @@ ffmpeg -i %input% -an ^
 -vstats_file logs/720p_3000k.log ^
 -y mp4/03000k_720p_h264.mp4
 echo.
+
+goto Audio
 
 :540p
 
@@ -205,6 +209,8 @@ ffmpeg -i %input% -an ^
 -y mp4/02000k_540p_h264.mp4
 echo.
 
+goto Audio
+
 :360p
 
 echo Encoding 360p 1000k
@@ -222,6 +228,8 @@ ffmpeg -i %input% -an ^
 -y mp4/01000k_360p_h264.mp4
 echo.
 
+:Audio
+
 echo Encoding aac_low 160k audio
 ffmpeg -i %input% -vn ^
 -metadata:s:a:0 language=eng ^
@@ -234,6 +242,6 @@ endlocal & (
   set "fragment=%fragment%"
 )
 
-echo Finished encoding the source file at multiple bitrates, all files were saved to mp4/. && echo.
+echo Finished encoding the source file to mp4/. && echo.
 
 exit /b
