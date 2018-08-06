@@ -171,8 +171,6 @@ ffmpeg -i %input% -an ^
 -y mp4/04500k_1080p_h264.mp4
 echo.
 
-goto Audio
-
 :720p
 
 echo Encoding 720p 3000k
@@ -190,8 +188,6 @@ ffmpeg -i %input% -an ^
 -y mp4/03000k_720p_h264.mp4
 echo.
 
-goto Audio
-
 :540p
 
 echo Encoding 540p 2000k
@@ -208,8 +204,6 @@ ffmpeg -i %input% -an ^
 -vstats_file logs/540p_2000k.log ^
 -y mp4/02000k_540p_h264.mp4
 echo.
-
-goto Audio
 
 :360p
 
