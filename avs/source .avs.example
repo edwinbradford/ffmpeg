@@ -15,15 +15,15 @@
 # Use trim if source contains video else use AudioTrim
 # AudioTrim uses seconds not frames
 # AudioTrim(3, 9)
-# From 00:00-00:20 at 24 fps
-  Trim(0, 480)
+# From 00:00-00:20 at 30 fps
+  Trim(0, 600)
 
 # x264 expects YV12 (YUV420)
 # Install FFdshow to preview avs files convereted to YV12 format or comment out whilst previewing
   ConvertToYV12()
 
-# Add 30 frames black to beginning, fadein 00 of the 30
-# Dissolve(blackness(last, 24), last, 00)
+# Create a 30 frame black clip at the beginning, cross fade none of the 30 frames
+  Dissolve(blackness(last, 30), last, 00)
 
-# Add 60 frames black to end, fadein 30 frames of the 60
-# Dissolve(last, blackness(last, 48), 24)
+# Create a 60 frame black clip at the end, cross fade 30 of the 60 frames
+  Dissolve(last, blackness(last, 60), 30)
