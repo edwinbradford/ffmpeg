@@ -1,10 +1,7 @@
-avi/*
 avs/*
 !avs/*.example
-bat/archive/*
+bat/dev/*
 fmp4/*
 logs/*
 mp4/*
-mpd/*
-
-favicon.ico
+media/*
