@@ -102,16 +102,19 @@ goto 1080p
 
 ffmpeg ^
 -channel_layout stereo ^
--r %framerate% ^
 -i %input% ^
--map 0 ^
--map 0 ^
--map 0 ^
--map 0 ^
+-map 0:0 ^
+-map 0:0 ^
+-map 0:0 ^
+-map 0:0 ^
+-map 0:1 ^
+-r %framerate% ^
 -preset slow ^
 -vstats_file logs/ffmp4.log ^
 -c:a aac ^
--profile:a aac_low -ac 2 -b:a 160k ^
+-profile:a aac_low ^
+-ac 2 ^
+-b:a:0 160k ^
 -metadata:s:a language=eng ^
 -c:v libx264 ^
 -b:v:0 4000k ^
@@ -137,7 +140,7 @@ ffmpeg ^
 -media_seg_name chunks/$RepresentationID$_$Number%%05d$.m4s ^
 -init_seg_name inits/$RepresentationID$.m4s ^
 -hls_playlist 1 ^
--f dash media/media.mpd
+-f dash media/media.mpd || goto Error
 
 echo. && echo Finished encoding. && echo.
 
@@ -157,6 +160,14 @@ echo Renamed "master.m3u8" to "media.m3u8" && echo.
 :Close
 
 echo Streams were saved in media/. && echo.
+
+pause > nul
+
+exit /b
+
+:Error
+
+echo. && echo FFmpeg found something wrong... && echo.
 
 pause > nul
 
