@@ -55,7 +55,7 @@ set /p input="Drag the source file into this window and press enter: "
 echo.
 
 REM check if filetyype is .avs or .avi
-FOR %%i IN ("%input%") DO (
+FOR %%i IN (%input%) DO (
   if %%~xi==.avs goto Parameters
   if %%~xi==.avi goto Parameters
 )
@@ -86,7 +86,7 @@ echo Enter the stream fragment size. Recommended values are 2 - 4.  && echo.
 set /p fragment="Fragment size : "
 echo.
 
-echo Enter the stream segment length (secs.) e.g. 8.  && echo.
+echo Enter the stream segment length (secs.) e.g. 4.  && echo.
 set /p segment="Segment length (secs) : "
 
 REM /a enable arithmetic
@@ -135,7 +135,6 @@ ffmpeg ^
 -b_strategy 0 ^
 -use_template 1 ^
 -use_timeline 0 ^
--window_size 5 ^
 -adaptation_sets "id=0,streams=v id=1,streams=a" ^
 -media_seg_name chunks/$RepresentationID$_$Number%%05d$.m4s ^
 -init_seg_name inits/$RepresentationID$.m4s ^

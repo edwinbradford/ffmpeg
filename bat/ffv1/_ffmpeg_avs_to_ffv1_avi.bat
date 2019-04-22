@@ -18,7 +18,7 @@ set /p input="Drag and drop the source file (.avi, .avs etc.) into this window a
 echo.
 
 REM check if filetyype is .avs or .avi
-FOR %%f IN ("%input%") DO (
+FOR %%f IN (%input%) DO (
 
   REM Extract file name without suffix
   set output=%%~nf

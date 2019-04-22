@@ -18,7 +18,7 @@ set /p input="Drag and drop a video file into this window and press enter: "
 echo.
 
 REM check if filetyype is .mp4
-FOR %%f IN ("%input%") DO (
+FOR %%f IN (%input%) DO (
 
   REM Extract file name without suffix
   set output=%%~nf
