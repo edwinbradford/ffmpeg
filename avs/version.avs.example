@@ -1,3 +1,0 @@
-# Prints Avisynth version in a media player.
-# Use to verify if 32 bit or 64 bit Avisynth is running
-  Version()

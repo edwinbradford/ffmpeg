@@ -1,7 +1,2 @@
-avs/*
-!avs/*.example
-bat/dev/*
-fmp4/*
+archive/*
 logs/*
-mp4/*
-media/*
