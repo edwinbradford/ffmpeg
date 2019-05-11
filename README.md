@@ -1,5 +1,5 @@
 # ffshell
-ffshell is a collection of bash shell scripts that re-encode media with FFmpeg. They have been tested on macOS and Windows and should work on Unix. Windows users need to install bash to run the scripts.
+ffshell is a collection of shell scripts that re-encode media using FFmpeg. They have been tested on macOS and Windows and should work on Unix. Windows users need to install bash either by installing Git Bash or Windows Subsystem for Linux (WSL) on Windows 10.
 
 The scripts are:
 
