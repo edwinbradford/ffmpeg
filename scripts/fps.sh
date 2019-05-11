@@ -5,7 +5,7 @@ pwd
 echo
 
 # Script title
-echo "This script re-encodes video in H.264 format at a constant frame rate (crf) of 60fps and saves it as an *.mp4"
+echo "This script re-encodes video at a constant frame rate using libx264 and saves it as *.mp4"
 echo
 
 echo "Checking for FFmpeg..."
@@ -39,6 +39,7 @@ shopt -s nocaseglob
 # List all files with supported video formats
 echo "The following files will be re-encoded:"
 echo
+
 ls -l *.{avi,mkv,mov,mp4,mxf}
 echo
 
