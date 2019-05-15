@@ -48,7 +48,7 @@ shopt -s nullglob
 shopt -s nocaseglob
 
 # List all files with supported video formats
-echo "The following files will be re-encoded at $framerate frames per second..."
+echo "The following files will be re-encoded at ${framerate} frames per second..."
 echo
 
 ls -l *.{avi,mkv,mov,mp4,mxf}

@@ -1,173 +1,159 @@
-@echo off
+#!/bin/bash
 
-REM Jump to this directory
-pushd "%~dp0"
+# Echo current directory
+pwd
+echo
 
-echo. && echo %cd% && echo.
+# Script title
+echo "This script uses libx264 to encode and package media for streaming as MPEG-DASH and HLS streams."
+echo
 
-REM Title
-echo FFfmp4 && echo.
+echo "Checking for FFmpeg..."
+echo
 
-REM Check if FFmpeg exists
-for %%x in (ffmpeg.exe) do if not [%%~$PATH:x]==[] goto Initialized
+# Check if FFmpeg exists
+ffmpeg -version >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+read -n1 -r -p "Press any key to exit...";
+exit 1; }
 
-echo Can't find FFmpeg, install FFmpeg then try again, press any key to exit...
-echo.
+echo "FFmpeg is installed."
+echo
 
-pause > nul
+echo "Drag and drop the folder containing the media to be re-encoded into this window and press enter..."
+echo
 
-exit /b
+# Assign selected directory path to variable
+IFS="" read -r input
+echo
 
-:Initialized
+# Evaluate path for spaces and escaped characters
+eval "files=( $input )"
 
-if not exist "logs" mkdir "logs"
+# Change directory to selected directory
+cd "${files}"
 
-if not exist "media" goto MakeMedia
+# Regex for validating integers
+isInteger='^[0-9]+$'
 
-REM Alert user
-echo The media directory already exists, all files will be overwritten, is this okay?
-echo.
+# Framerate
+while :; do
+  read -ep "Please enter the framerate... " framerate
+  echo
+  [[ $framerate =~ $isInteger ]] || { echo "The framerate must be an integer number. Please try again... "; echo; continue; }
+  break
+done
 
-:QueryRemoveMedia
+# Fragment size, recommendation is 2 to 4
+while :; do
+  read -ep "Please enter the fragment size. Recommended values are 2 - 4... " fragment
+  echo
+  [[ $fragment =~ $isInteger ]] || { echo "The fragment size must be an integer number. Please try again... "; echo; continue; }
+  break
+done
 
-set /p m="Enter 'y' for yes or 'n' for no: "
-echo.
+# Calculate the GOP
+GOP=$((framerate*fragment))
 
-if %m%==y goto RemoveMedia
-if %m%==n exit
+# Stream segment length, multiple of fragment size
+while :; do
+  read -ep "Please enter the segment length (secs). e.g. 4... " segment
+  echo
+  [[ $segment =~ $isInteger ]] || { echo "The segment length must be an integer number. Please try again... "; echo; continue; }
+  break
+done
 
-REM If neither of the above
-goto QueryRemoveMedia
+# Disable case sensitivity and don't print errors for missing file types
+shopt -s nullglob
+shopt -s nocaseglob
 
-:RemoveMedia
+# List all files with supported video formats
+echo "The following files will be encoded at ${framerate} fps with a GOP of ${GOP} and segment length of ${segment}s... "
+echo
 
-rmdir "media" /s /q
+ls -l *.{avi,mkv,mov,mp4,mxf}
+echo
 
-:MakeMedia
+# Reset shell options
+# shopt -u nullglob
+# shopt -u nocaseglob
 
-mkdir "media"
-mkdir "media\chunks"
-mkdir "media\inits"
+# Pause for input
+read -n1 -r -p "Press any key to continue... "
+echo
 
-:Source
+# Make directories
 
-set /p input="Drag the source file into this window and press enter: "
-echo.
+if [ ! -d "logs" ]; then
+  mkdir "logs";
+fi
 
-REM check if filetyype is .avs or .avi
-FOR %%i IN (%input%) DO (
-  if %%~xi==.avs goto Parameters
-  if %%~xi==.avi goto Parameters
-)
+if [ ! -d "media" ]; then
+  mkdir "media";
+  mkdir "media/chunks";
+  mkdir "media/inits";
+fi
 
-REM Alert user to file format
-echo You are not using an .avs or .avi source file, are you sure you want to continue?
-echo.
+# Re-encode supported video files with FFmpeg
+for i in *.{avi,mkv,mov,mp4,mxf}
+do
 
-:AviAvs
+  # Skip file if it is a system file or symlink
+  [ -f "$i" ] || break
 
-set /p m="Enter 'y' for yes or 'n' for no: "
-echo.
+  ffmpeg \
+  -channel_layout stereo \
+  -i "$i" \
+  -map 0:0 \
+  -map 0:0 \
+  -map 0:0 \
+  -map 0:0 \
+  -map 0:1 \
+  -r $framerate \
+  -preset slow \
+  -vstats_file logs/ffmp4.log \
+  -c:a aac \
+  -profile:a aac_low \
+  -ac 2 \
+  -b:a:0 160k \
+  -metadata:s:a language=eng \
+  -c:v libx264 \
+  -b:v:0 4000k \
+  -b:v:1 3000k \
+  -b:v:2 2000k \
+  -b:v:3 1000k \
+  -s:v:2 1280x720 \
+  -s:v:3 640x360 \
+  -profile:v:0 high \
+  -profile:v:1 high \
+  -profile:v:2 high \
+  -profile:v:3 high \
+  -bf 1 \
+  -keyint_min $GOP \
+  -g $GOP \
+  -seg_duration $segment \
+  -sc_threshold 0 \
+  -b_strategy 0 \
+  -use_template 1 \
+  -use_timeline 0 \
+  -adaptation_sets "id=0,streams=v id=1,streams=a" \
+  -media_seg_name chunks/$RepresentationID$_$Number%%05d$.m4s \
+  -init_seg_name inits/$RepresentationID$.m4s \
+  -hls_playlist 1 \
+  -f dash "media/media.mpd"
 
-if %m%==y goto Parameters
-if %m%==n exit
+  echo
 
-REM If neither of the above
-goto AviAvs
+done
 
-:Parameters
+echo && echo "Finished encoding" && echo
 
-echo Enter the source video's framerate. && echo.
-set /p framerate="Framerate : "
-echo.
+# Rename "master.m3u8" to "media.m3u8"
+mv "media/master.m3u8" "media/media.m3u8"
 
-REM MPEG DASH GOP recommendation is 2 to 4 times framerate
-echo Enter the stream fragment size. Recommended values are 2 - 4.  && echo.
-set /p fragment="Fragment size : "
-echo.
+echo "The streams were saved in a folder called 'media' in the same directory as your source files."
 
-echo Enter the stream segment length (secs.) e.g. 4.  && echo.
-set /p segment="Segment length (secs) : "
+# Pause
+read -n1 -r -p "Finished re-encoding all files. Press any key to exit... "
+echo
 
-REM /a enable arithmetic
-set /a GOP=%framerate%*%fragment%
-
-echo. && echo FFmpeg will now encode the source file at resolutions up to 1080p for streaming, press any key to continue... && echo.
-
-pause > nul
-
-goto 1080p
-
-:1080p
-
-ffmpeg ^
--channel_layout stereo ^
--i %input% ^
--map 0:0 ^
--map 0:0 ^
--map 0:0 ^
--map 0:0 ^
--map 0:1 ^
--r %framerate% ^
--preset slow ^
--vstats_file logs/ffmp4.log ^
--c:a aac ^
--profile:a aac_low ^
--ac 2 ^
--b:a:0 160k ^
--metadata:s:a language=eng ^
--c:v libx264 ^
--b:v:0 4000k ^
--b:v:1 3000k ^
--b:v:2 2000k ^
--b:v:3 1000k ^
--s:v:2 1280x720 ^
--s:v:3 640x360 ^
--profile:v:0 high ^
--profile:v:1 high ^
--profile:v:2 high ^
--profile:v:3 high ^
--bf 1 ^
--keyint_min %GOP% ^
--g %GOP% ^
--seg_duration %segment% ^
--sc_threshold 0 ^
--b_strategy 0 ^
--use_template 1 ^
--use_timeline 0 ^
--adaptation_sets "id=0,streams=v id=1,streams=a" ^
--media_seg_name chunks/$RepresentationID$_$Number%%05d$.m4s ^
--init_seg_name inits/$RepresentationID$.m4s ^
--hls_playlist 1 ^
--f dash media/media.mpd || goto Error
-
-echo. && echo Finished encoding. && echo.
-
-REM Use DOS to rename "master.m3u8" to "media.m3u8"
-ren "media\master.m3u8" "media.m3u8"
-
-if exist "media\media.m3u8" goto PassRename
-
-echo Could not rename "master.m3u8" to "media.m3u8" && echo.
-
-goto Close
-
-:PassRename
-
-echo Renamed "master.m3u8" to "media.m3u8" && echo.
-
-:Close
-
-echo Streams were saved in media/. && echo.
-
-pause > nul
-
-exit /b
-
-:Error
-
-echo. && echo FFmpeg found something wrong... && echo.
-
-pause > nul
-
-exit /b
+exit 0
