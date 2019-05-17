@@ -34,12 +34,13 @@ cd "${files}"
 
 # Regex for validating integers
 isInteger='^[0-9]+$'
+isNumeral='^[0-9]+([.][0-9]+)?$'
 
 # Framerate
 while :; do
   read -ep "Please enter the desired framerate... " framerate
   echo
-  [[ $framerate =~ $isInteger ]] || { echo "The framerate must be an integer number. Please try again... "; echo; continue; }
+  [[ $framerate =~ $isNumeral ]] || { echo "The framerate must be a number. Please try again... "; echo; continue; }
   break
 done
 

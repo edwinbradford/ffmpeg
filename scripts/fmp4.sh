@@ -32,33 +32,34 @@ eval "files=( $input )"
 # Change directory to selected directory
 cd "${files}"
 
-# Regex for validating integers
-isInteger='^[0-9]+$'
+# Regex for validating numbers
+isNumeral='^[0-9]+([.][0-9]+)?$'
 
 # Framerate
 while :; do
   read -ep "Please enter the framerate... " framerate
   echo
-  [[ $framerate =~ $isInteger ]] || { echo "The framerate must be an integer number. Please try again... "; echo; continue; }
+  [[ $framerate =~ $isNumeral ]] || { echo "The framerate must be a number. Please try again... "; echo; continue; }
   break
 done
 
 # Fragment size, recommendation is 2 to 4
 while :; do
-  read -ep "Please enter the fragment size. Recommended values are 2 - 4... " fragment
+  read -ep "Please enter the keyframe interval. e.g. 3.2 (s) for 30fps and 48kHz... " fragment
   echo
-  [[ $fragment =~ $isInteger ]] || { echo "The fragment size must be an integer number. Please try again... "; echo; continue; }
+  [[ $fragment =~ $isNumeral ]] || { echo "The fragment size must be a number only. Please try again... "; echo; continue; }
   break
 done
 
 # Calculate the GOP
 GOP=$((framerate*fragment))
 
+
 # Stream segment length, multiple of fragment size
 while :; do
-  read -ep "Please enter the segment length (secs). e.g. 4... " segment
+  read -ep "Please enter the segment length in multiples of the keyframe interval... " segment
   echo
-  [[ $segment =~ $isInteger ]] || { echo "The segment length must be an integer number. Please try again... "; echo; continue; }
+  [[ $segment =~ $isNumeral ]] || { echo "The segment length must be a number. Please try again... "; echo; continue; }
   break
 done
 
@@ -103,16 +104,20 @@ do
   ffmpeg \
   -channel_layout stereo \
   -i "$i" \
-  -map 0:0 \
-  -map 0:0 \
-  -map 0:0 \
-  -map 0:0 \
-  -map 0:1 \
+  -map 0:v:0 \
+  -map 0:a:0 \
+  -map 0:v:0 \
+  -map 0:a:0 \
+  -map 0:v:0 \
+  -map 0:a:0 \
+  -map 0:v:0 \
+  -map 0:a:0 \
   -r $framerate \
   -preset slow \
   -vstats_file logs/ffmp4.log \
   -c:a aac \
   -profile:a aac_low \
+  -ar 48000 \
   -ac 2 \
   -b:a:0 160k \
   -metadata:s:a language=eng \
@@ -134,10 +139,8 @@ do
   -sc_threshold 0 \
   -b_strategy 0 \
   -use_template 1 \
-  -use_timeline 0 \
+  -use_timeline 1 \
   -adaptation_sets "id=0,streams=v id=1,streams=a" \
-  -media_seg_name chunks/$RepresentationID$_$Number%%05d$.m4s \
-  -init_seg_name inits/$RepresentationID$.m4s \
   -hls_playlist 1 \
   -f dash "media/media.mpd"
 
@@ -145,12 +148,15 @@ do
 
 done
 
+# -media_seg_name chunks/$RepresentationID/$Number/$.$ext$ \
+# -init_seg_name inits/$RepresentationID/$.$ext$ \
+
 echo && echo "Finished encoding" && echo
 
 # Rename "master.m3u8" to "media.m3u8"
 mv "media/master.m3u8" "media/media.m3u8"
 
-echo "The streams were saved in a folder called 'media' in the same directory as your source files."
+echo "The streams were saved in a folder called 'media' in the same directory as your source files." && echo
 
 # Pause
 read -n1 -r -p "Finished re-encoding all files. Press any key to exit... "
