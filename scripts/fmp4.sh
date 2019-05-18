@@ -12,25 +12,55 @@ echo "Checking for FFmpeg..."
 echo
 
 # Check if FFmpeg exists
-ffmpeg -version >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
-read -n1 -r -p "Press any key to exit...";
+command -v ffmpeg >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+read -n 1 -s -r -p "Press any key to exit... ";
 exit 1; }
 
 echo "FFmpeg is installed."
 echo
 
+# Check if FFmpeg exists
+command -v bc >/dev/null 2>&1 || { echo >&2 "Your Shell does not include the POSIX Basic Calculator utility (bc). Please run a shell that includes it."; echo;
+read -n 1 -s -r -p "Press any key to exit... ";
+exit 1; }
+
+# Source media
 echo "Drag and drop the folder containing the media to be re-encoded into this window and press enter..."
 echo
 
-# Assign selected directory path to variable
-IFS="" read -r input
-echo
+# Disable case sensitivity and errors for missing file types
+shopt -s nullglob
+shopt -s nocaseglob
 
-# Evaluate path for spaces and escaped characters
-eval "files=( $input )"
+# Check for supported media files
+while :; do
+  # Assign selected directory path to variable
+  IFS="" read -r input
+  echo
 
-# Change directory to selected directory
-cd "${files}"
+  # Evaluate path variable for quotes and spaces for cd command
+  eval "input=( $input )"
+
+  # Use wslpath to convert Windows paths to Unix paths for WSL on Windows
+  if command -v wslpath >/dev/null 2>&1; then
+    input="$( wslpath "$input" )"
+  fi
+
+  # Change directory to selected directory
+  cd "${input}"
+
+  if [[ -n $(echo *.{avi,mkv,mov,mp4,mxf}) ]]; then
+    echo "The following supported media files were found... "; echo;
+    ls -l *.{avi,mkv,mov,mp4,mxf}; echo; break
+  else
+    echo "No supported media files found. Please try again... "; echo; continue
+  fi
+
+done
+
+# Reset shell options
+# shopt -u nullglob
+# shopt -u nocaseglob
 
 # Regex for validating numbers
 isNumeral='^[0-9]+([.][0-9]+)?$'
@@ -39,21 +69,17 @@ isNumeral='^[0-9]+([.][0-9]+)?$'
 while :; do
   read -ep "Please enter the framerate... " framerate
   echo
-  [[ $framerate =~ $isNumeral ]] || { echo "The framerate must be a number. Please try again... "; echo; continue; }
+  [[ $framerate =~ $isNumeral ]] || { echo; echo "The framerate must be a number. Please try again... "; echo; continue; }
   break
 done
 
-# Fragment size, recommendation is 2 to 4
+# Fragment size, see http://anton.lindstrom.io/gop-size-calculator/
 while :; do
-  read -ep "Please enter the keyframe interval. e.g. 3.2 (s) for 30fps and 48kHz... " fragment
+  read -ep "Please enter the keyframe interval (secs)... " fragment
   echo
-  [[ $fragment =~ $isNumeral ]] || { echo "The fragment size must be a number only. Please try again... "; echo; continue; }
+  [[ $fragment =~ $isNumeral ]] || { echo "The keyframe interval must be a number only. Please try again... "; echo; continue; }
   break
 done
-
-# Calculate the GOP
-GOP=$((framerate*fragment))
-
 
 # Stream segment length, multiple of fragment size
 while :; do
@@ -63,23 +89,15 @@ while :; do
   break
 done
 
-# Disable case sensitivity and don't print errors for missing file types
-shopt -s nullglob
-shopt -s nocaseglob
+# Calculate the GOP with basic calculaotr for floating point values
+GOP=$(echo "$framerate*$fragment" | bc)
 
 # List all files with supported video formats
-echo "The following files will be encoded at ${framerate} fps with a GOP of ${GOP} and segment length of ${segment}s... "
+echo "Your media will be encoded at ${framerate} fps with a GOP size of ${GOP} frames and a segment length of ${segment} s... "
 echo
-
-ls -l *.{avi,mkv,mov,mp4,mxf}
-echo
-
-# Reset shell options
-# shopt -u nullglob
-# shopt -u nocaseglob
 
 # Pause for input
-read -n1 -r -p "Press any key to continue... "
+read -n 1 -s -r -p "Press any key to continue... "
 echo
 
 # Make directories
@@ -139,10 +157,10 @@ do
   -sc_threshold 0 \
   -b_strategy 0 \
   -use_template 1 \
-  -use_timeline 1 \
+  -use_timeline 0 \
   -adaptation_sets "id=0,streams=v id=1,streams=a" \
   -hls_playlist 1 \
-  -f dash "media/media.mpd"
+  -f dash "media/media.mpd" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 
   echo
 
@@ -159,7 +177,7 @@ mv "media/master.m3u8" "media/media.m3u8"
 echo "The streams were saved in a folder called 'media' in the same directory as your source files." && echo
 
 # Pause
-read -n1 -r -p "Finished re-encoding all files. Press any key to exit... "
+read -n 1 -s -r -p "Finished re-encoding all files. Press any key to exit... "
 echo
 
 exit 0

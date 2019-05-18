@@ -12,8 +12,8 @@ echo "Checking for FFmpeg..."
 echo
 
 # Check if FFmpeg exists
-ffmpeg -version >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
-read -n1 -r -p "Press any key to exit..."
+command -v ffmpeg >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+read -n 1 -s -r -p "Press any key to exit...";
 exit 1; }
 
 echo "FFmpeg is installed."
@@ -59,7 +59,7 @@ echo
 # shopt -u nocaseglob
 
 # Pause for input
-read -n1 -r -p "Press any key to continue... "
+read -n 1 -s -r -p "Press any key to continue... "
 echo
 
 # Make directory
@@ -97,7 +97,7 @@ ls -l mp4/*.mp4
 echo
 
 # Pause
-read -n1 -r -p "Finished re-encoding all files. Press any key to exit... "
+read -n 1 -s -r -p "Finished re-encoding all files. Press any key to exit... "
 echo
 
 exit 0
