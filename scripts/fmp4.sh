@@ -122,9 +122,6 @@ mkdir "media";
 mkdir "media/chunks";
 mkdir "media/inits";
 
-CHUNKNAME=chunks/stream-\$RepresentationID\$-\$Bandwidth\$-\$Number%05d\$.m4s
-INITNAME=inits/stream-\$RepresentationID\$-\$Bandwidth\$.m4s
-
 # Re-encode supported video files with FFmpeg
 for i in *.{avi,mkv,mov,mp4,mxf}
 do
