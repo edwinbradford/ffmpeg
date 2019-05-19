@@ -1,36 +1,57 @@
 #!/bin/bash
 
 # Echo current directory
-pwd
-echo
+echo; pwd; echo
 
 # Script title
-echo "This script uses libx264 to re-encode media at a Constant Frame Rate (CFR) and save it as *.mp4."
-echo
-
-echo "Checking for FFmpeg..."
-echo
+echo "This script uses FFmpeg to encode media at a Constant Frame Rate (CFR) and save it as *.mp4."; echo;
 
 # Check if FFmpeg exists
-command -v ffmpeg >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
-read -n 1 -s -r -p "Press any key to exit...";
-exit 1; }
+echo "Checking for FFmpeg..."; echo;
+if command -v ffmpeg >/dev/null 2>&1 ; then
+  echo "FFmpeg is installed."; echo;
+else
+  echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+  read -n 1 -s -r -p "Press any key to exit... ";
+  exit 1;
+fi
 
-echo "FFmpeg is installed."
-echo
+# Source media
+echo "Drag and drop the folder containing the media into this window and press enter..."; echo;
 
-echo "Drag and drop the folder containing the media to be re-encoded into this window and press enter..."
-echo
+# Disable case sensitivity and error reporting for missing file types
+shopt -s nullglob
+shopt -s nocaseglob
 
-# Assign selected directory path to variable
-IFS="" read -r input
-echo
+# Check for supported media files
+while :; do
+  # Assign selected directory path to variable
+  IFS="" read -r input
+  echo
 
-# Evaluate path for spaces and escaped characters
-eval "files=( $input )"
+  # Evaluate path variable for quotes and spaces for cd command
+  eval "input=( $input )"
 
-# Change directory to selected directory
-cd "${files}"
+  # Use wslpath to convert Windows paths to Unix paths for WSL on Windows
+  if command -v wslpath >/dev/null 2>&1; then
+    input="$( wslpath "$input" )"
+  fi
+
+  # Change directory to selected directory
+  cd "${input}"
+
+  if [[ -n $(echo *.{avi,mkv,mov,mp4,mxf}) ]]; then
+    echo "The following supported media files were found... "; echo;
+    ls -l *.{avi,mkv,mov,mp4,mxf}; echo; break
+  else
+    echo "No supported media files found. Please try again... "; echo; continue
+  fi
+
+done
+
+# Reset shell options
+# shopt -u nullglob
+# shopt -u nocaseglob
 
 # Regex for validating integers
 isNumeral='^[0-9]+([.][0-9]+)?$'
@@ -43,29 +64,25 @@ while :; do
   break
 done
 
-# Disable case sensitivity and don't print errors for missing file types
-shopt -s nullglob
-shopt -s nocaseglob
-
-# List all files with supported video formats
-echo "The following files will be re-encoded at ${framerate} frames per second..."
-echo
-
-ls -l *.{avi,mkv,mov,mp4,mxf}
-echo
-
-# Reset shell options
-# shopt -u nullglob
-# shopt -u nocaseglob
-
 # Pause for input
 read -n 1 -s -r -p "Press any key to continue... "
 echo
 
 # Make directory
-if [ ! -d "mp4" ]; then
-  mkdir "mp4";
+
+if [ -d "mp4" ]; then
+  echo; echo "The existing 'mp4' folder in your directory will be deleted."; echo;
+  while true; do
+    read -p "Delete? [y] / [n] " yn
+    case $yn in
+      [Yy]* ) rm -rf "mp4"; break;;
+      [Nn]* ) exit 0;;
+      * ) echo; echo "Please enter 'y' for yes or 'n' for no... " ; echo;;
+    esac
+  done
 fi
+
+mkdir "mp4";
 
 # Re-encode supported video files with FFmpeg
 for i in *.{avi,mkv,mov,mp4,mxf}
@@ -83,11 +100,9 @@ do
   -c:v libx264 \
   -preset slow \
   -crf 18 \
-  -y "mp4/${j}.mp4"
-  echo
+  -y "mp4/${j}.mp4" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 
-  echo "${i} was re-encoded and saved as ${j}.mp4 in mp4"
-  echo
+  echo; echo "${i} was re-encoded and saved as ${j}.mp4 in mp4"; echo;
 
 done
 

@@ -1,34 +1,34 @@
 #!/bin/bash
 
 # Echo current directory
-pwd
-echo
+echo; pwd; echo
 
 # Script title
-echo "This script uses libx264 to encode and package media for streaming as MPEG-DASH and HLS streams."
-echo
-
-echo "Checking for FFmpeg..."
-echo
+echo "This script uses FFmpeg to encode and package media for streaming as MPEG-DASH and HLS streams."; echo;
 
 # Check if FFmpeg exists
-command -v ffmpeg >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
-read -n 1 -s -r -p "Press any key to exit... ";
-exit 1; }
+echo "Checking for FFmpeg..."; echo;
+if command -v ffmpeg >/dev/null 2>&1 ; then
+  echo "FFmpeg is installed."; echo;
+else
+  echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+  read -n 1 -s -r -p "Press any key to exit... ";
+  exit 1;
+fi
 
-echo "FFmpeg is installed."
-echo
-
-# Check if FFmpeg exists
-command -v bc >/dev/null 2>&1 || { echo >&2 "Your Shell does not include the POSIX Basic Calculator utility (bc). Please run a shell that includes it."; echo;
-read -n 1 -s -r -p "Press any key to exit... ";
-exit 1; }
+# Check if Basic Calculator exists
+if command -v bc >/dev/null 2>&1 ; then
+  echo "Basic Calculator is installed."; echo;
+else
+  echo >&2 "This script requires the POSIX standard Basic Calculator (bc). Please add it to your shell"; echo;
+  read -n 1 -s -r -p "Press any key to exit... ";
+  exit 1;
+fi
 
 # Source media
-echo "Drag and drop the folder containing the media to be re-encoded into this window and press enter..."
-echo
+echo "Drag and drop the folder containing the media into this window and press enter..."; echo;
 
-# Disable case sensitivity and errors for missing file types
+# Disable case sensitivity and error reporting for missing file types
 shopt -s nullglob
 shopt -s nocaseglob
 
@@ -83,7 +83,7 @@ done
 
 # Stream segment length, multiple of fragment size
 while :; do
-  read -ep "Please enter the segment length in multiples of the keyframe interval... " segment
+  read -ep "Please enter the segment length ( ${fragment} × integer number )... " segment
   echo
   [[ $segment =~ $isNumeral ]] || { echo "The segment length must be a number. Please try again... "; echo; continue; }
   break
@@ -106,11 +106,24 @@ if [ ! -d "logs" ]; then
   mkdir "logs";
 fi
 
-if [ ! -d "media" ]; then
-  mkdir "media";
-  mkdir "media/chunks";
-  mkdir "media/inits";
+if [ -d "media" ]; then
+  echo; echo "The existing 'media' folder in your directory will be deleted."; echo;
+  while true; do
+    read -p "Delete? [y] / [n] " yn
+    case $yn in
+      [Yy]* ) rm -rf "media"; break;;
+      [Nn]* ) exit 0;;
+      * ) echo; echo "Please enter 'y' for yes or 'n' for no... " ; echo;;
+    esac
+  done
 fi
+
+mkdir "media";
+mkdir "media/chunks";
+mkdir "media/inits";
+
+CHUNKNAME=chunks/stream-\$RepresentationID\$-\$Bandwidth\$-\$Number%05d\$.m4s
+INITNAME=inits/stream-\$RepresentationID\$-\$Bandwidth\$.m4s
 
 # Re-encode supported video files with FFmpeg
 for i in *.{avi,mkv,mov,mp4,mxf}
@@ -123,11 +136,8 @@ do
   -channel_layout stereo \
   -i "$i" \
   -map 0:v:0 \
-  -map 0:a:0 \
   -map 0:v:0 \
-  -map 0:a:0 \
   -map 0:v:0 \
-  -map 0:a:0 \
   -map 0:v:0 \
   -map 0:a:0 \
   -r $framerate \
@@ -158,6 +168,8 @@ do
   -b_strategy 0 \
   -use_template 1 \
   -use_timeline 0 \
+  -media_seg_name chunks/stream-\$RepresentationID\$-\$Bandwidth\$-\$Number%05d\$.m4s \
+  -init_seg_name inits/stream-\$RepresentationID\$-\$Bandwidth\$.m4s \
   -adaptation_sets "id=0,streams=v id=1,streams=a" \
   -hls_playlist 1 \
   -f dash "media/media.mpd" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
@@ -165,9 +177,6 @@ do
   echo
 
 done
-
-# -media_seg_name chunks/$RepresentationID/$Number/$.$ext$ \
-# -init_seg_name inits/$RepresentationID/$.$ext$ \
 
 echo && echo "Finished encoding" && echo
 

@@ -1,36 +1,57 @@
 #!/bin/bash
 
 # Echo current directory
-pwd
-echo
+echo; pwd; echo
 
 # Script title
-echo "This script uses libx264 to encode media with a Constant Rate Factor (CRF) for consistent quality and save it as *.mp4."
-echo
-
-echo "Checking for FFmpeg..."
-echo
+echo "This script uses FFmpeg to encode media with a Constant Rate Factor (CRF) and save it as *.mp4."; echo;
 
 # Check if FFmpeg exists
-command -v ffmpeg >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
-read -n 1 -s -r -p "Press any key to exit...";
-exit 1; }
+echo "Checking for FFmpeg..."; echo;
+if command -v ffmpeg >/dev/null 2>&1 ; then
+  echo "FFmpeg is installed."; echo;
+else
+  echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+  read -n 1 -s -r -p "Press any key to exit... ";
+  exit 1;
+fi
 
-echo "FFmpeg is installed."
-echo
+# Source media
+echo "Drag and drop the folder containing the media into this window and press enter..."; echo;
 
-echo "Please drag the folder containing the media to be encoded into this window and press enter..."
-echo
+# Disable case sensitivity and error reporting for missing file types
+shopt -s nullglob
+shopt -s nocaseglob
 
-# Assign selected directory path to variable
-IFS="" read -r input
-echo
+# Check for supported media files
+while :; do
+  # Assign selected directory path to variable
+  IFS="" read -r input
+  echo
 
-# Evaluate path for spaces and escaped characters
-eval "files=( $input )"
+  # Evaluate path variable for quotes and spaces for cd command
+  eval "input=( $input )"
 
-# Change directory to selected directory
-cd "${files}"
+  # Use wslpath to convert Windows paths to Unix paths for WSL on Windows
+  if command -v wslpath >/dev/null 2>&1; then
+    input="$( wslpath "$input" )"
+  fi
+
+  # Change directory to selected directory
+  cd "${input}"
+
+  if [[ -n $(echo *.{avi,mkv,mov,mp4,mxf}) ]]; then
+    echo "The following supported media files were found... "; echo;
+    ls -l *.{avi,mkv,mov,mp4,mxf}; echo; break
+  else
+    echo "No supported media files found. Please try again... "; echo; continue
+  fi
+
+done
+
+# Reset shell options
+# shopt -u nullglob
+# shopt -u nocaseglob
 
 # Regex for validating integers
 isInteger='^[0-9]+$'
@@ -38,7 +59,7 @@ isNumeral='^[0-9]+([.][0-9]+)?$'
 
 # Framerate
 while :; do
-  read -ep "Please enter the desired framerate... " framerate
+  read -ep "Please enter the framerate... " framerate
   echo
   [[ $framerate =~ $isNumeral ]] || { echo "The framerate must be a number. Please try again... "; echo; continue; }
   break
@@ -59,7 +80,7 @@ done
 
 # Resolution
 while :; do
-  read -ep "Please enter the desired video height... " height
+  read -ep "Please enter the video height (the size will be 16:9)... " height
   echo
   [[ $height =~ $isInteger ]] || { echo "The video height must be an integer number. Please try again... "; echo; continue; }
   break
@@ -68,34 +89,33 @@ done
 # Calculate the width
 width=$((height*16/9))
 
-# Disable case sensitivity and don't print errors for missing file types
-shopt -s nullglob
-shopt -s nocaseglob
-
 # List all files with supported video formats
-echo "The following files will be encoded with CRF ${crf} at a resolution of ${width}×${height} (16:9) at ${framerate} frames per second..."
+echo "Your media will be encoded with CRF ${crf} at a resolution of ${width}×${height} (16:9) at ${framerate} fps..."
 echo
-
-ls -l *.{avi,mkv,mov,mp4,mxf}
-echo
-
-# Reset shell options
-# shopt -u nullglob
-# shopt -u nocaseglob
 
 # Pause for input
 read -n 1 -s -r -p "Press any key to continue... "
 echo
 
 # Make directory
-if [ ! -d "${height}p" ]; then
-  mkdir "${height}p";
+
+if [ -d "${height}p" ]; then
+  echo; echo "The existing '${height}p' folder in your directory will be deleted."; echo;
+  while true; do
+    read -p "Delete? [y] / [n] " yn
+    case $yn in
+      [Yy]* ) rm -rf "${height}p"; break;;
+      [Nn]* ) exit 0;;
+      * ) echo; echo "Please enter 'y' for yes or 'n' for no... " ; echo;;
+    esac
+  done
 fi
 
-echo "Encoding ${height}p"
-echo
+mkdir "${height}p";
 
 # Re-encode supported video files with FFmpeg
+echo; echo "Encoding ${height}p"; echo;
+
 for i in *.{avi,mkv,mov,mp4,mxf}
 do
 
@@ -116,11 +136,9 @@ do
   -preset slow \
   -vf "scale=-2:${height}" \
   -profile:a aac_low -ac 2 -b:a 160k \
-  -y "${height}p/${j}.mp4"
-  echo
+  -y "${height}p/${j}.mp4" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 
-  echo "${i} was encoded and saved as ${j}.mp4 in ${height}p"
-  echo
+  echo; echo "${i} was encoded and saved as ${j}.mp4 in ${height}p"; echo;
 
 done
 

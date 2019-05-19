@@ -1,46 +1,53 @@
 #!/bin/bash
 
 # Echo current directory
-pwd
-echo
+echo; pwd; echo
 
 # Script title
-echo "This script uses FFV1 compression to encode media in a lossless format and save it as cross platform *.mkv."
-echo
-
-echo "Checking for FFmpeg..."
-echo
+echo "This script uses FFmpeg to encode media in a lossless format and save it as cross platform *.mkv."; echo
 
 # Check if FFmpeg exists
-command -v ffmpeg >/dev/null 2>&1 || { echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
-read -n 1 -s -r -p "Press any key to exit...";
-exit 1; }
+echo "Checking for FFmpeg..."; echo;
+if command -v ffmpeg >/dev/null 2>&1 ; then
+  echo "FFmpeg is installed."; echo;
+else
+  echo >&2 "FFmpeg is not installed. Please install it then try again."; echo;
+  read -n 1 -s -r -p "Press any key to exit... ";
+  exit 1;
+fi
 
-echo "FFmpeg is installed."
-echo
+# Source media
+echo "Drag and drop the folder containing the media into this window and press enter..."; echo;
 
-echo "Drag and drop the folder containing the media to be encoded into this window and press enter..."
-echo
-
-# Assign selected directory path to variable
-IFS="" read -r input
-echo
-
-# Evaluate path for spaces and escaped characters
-eval "files=( $input )"
-
-# Change directory to selected directory
-cd "${files}"
-
-# Disable case sensitivity and don't print errors for missing file types
+# Disable case sensitivity and error reporting for missing file types
 shopt -s nullglob
 shopt -s nocaseglob
 
-# List all files with supported video formats
-echo "The following files will be encoded as FFV1 *.mkv files..."
-echo
-ls -l *.{avi,mkv,mov,mp4,mxf}
-echo
+# Check for supported media files
+while :; do
+  # Assign selected directory path to variable
+  IFS="" read -r input
+  echo
+
+  # Evaluate path variable for quotes and spaces for cd command
+  eval "input=( $input )"
+
+  # Use wslpath to convert Windows paths to Unix paths for WSL on Windows
+  if command -v wslpath >/dev/null 2>&1; then
+    input="$( wslpath "$input" )"
+  fi
+
+  # Change directory to selected directory
+  cd "${input}"
+
+  if [[ -n $(echo *.{avi,mkv,mov,mp4,mxf}) ]]; then
+    echo "The following supported media files were found... "; echo;
+    ls -l *.{avi,mkv,mov,mp4,mxf}; echo; break
+  else
+    echo "No supported media files found. Please try again... "; echo; continue
+  fi
+
+done
 
 # Reset shell options
 # shopt -u nullglob
@@ -51,9 +58,20 @@ read -n 1 -s -r -p "Press any key to continue... "
 echo
 
 # Make directory
-if [ ! -d "mkv" ]; then
-  mkdir "mkv";
+
+if [ -d "mkv" ]; then
+  echo; echo "The existing 'mkv' folder in your directory will be deleted."; echo;
+  while true; do
+    read -p "Delete? [y] / [n] " yn
+    case $yn in
+      [Yy]* ) rm -rf "mkv"; break;;
+      [Nn]* ) exit 0;;
+      * ) echo; echo "Please enter 'y' for yes or 'n' for no... " ; echo;;
+    esac
+  done
 fi
+
+mkdir "mkv";
 
 # Re-encode supported video files with FFmpeg
 for i in *.{avi,mkv,mov,mp4,mxf}
@@ -69,11 +87,9 @@ do
   ffmpeg -i "$i" \
   -c:v ffv1 \
   -c:a copy \
-  -y "mkv/${j}.mkv"
-  echo
+  -y "mkv/${j}.mkv" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 
-  echo "${i} was encoded with FFV1 and saved as ${j}.mkv in 'mkv'."
-  echo
+  echo; echo "${i} was encoded with FFV1 and saved as ${j}.mkv in 'mkv'."; echo;
 
 done
 
