@@ -64,6 +64,10 @@ while :; do
   break
 done
 
+# List all files with supported video formats
+echo "Your media will be re-encoded at ${framerate} fps..."
+echo
+
 # Pause for input
 read -n 1 -s -r -p "Press any key to continue... "
 echo
