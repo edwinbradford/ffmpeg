@@ -5,9 +5,10 @@ The scripts are:
 
 crf.sh\
 dnxhd.sh\
+ffv1.sh \
 fmp4.sh\
 fps.sh\
-ffv1.sh
+prores.sh
 
 crf.sh\
 Encodes media as H264 using a Constant Rate Factor (CRF) prioritising quality over bitrate. This script is suitable for generating online videos that will be self hosted or uploaded to a video platform such as YouTube.
@@ -23,3 +24,6 @@ Re-encodes Variable Frame Rate (VFR) media at a Constant Frame Rate (CFR) whilst
 
 ffv1.sh\
 Encodes media with a lossless FFV1 codec and saves it in an open source cross platform matroska container.
+
+prores.sh\
+Encodes media using Apple's intraframe (spatial) ProRes family of codecs and saves it in an Apple mov container. 
