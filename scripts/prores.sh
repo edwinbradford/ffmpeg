@@ -53,6 +53,54 @@ done
 # shopt -u nullglob
 # shopt -u nocaseglob
 
+# Regex for validating integers
+isInteger='^[0-9]+$'
+isNumeral='^[0-9]+([.][0-9]+)?$'
+
+# Framerate
+while :; do
+  read -ep "Please enter the framerate... " framerate
+  echo
+  [[ $framerate =~ $isNumeral ]] || { echo "The framerate must be a number. Please try again... "; echo; continue; }
+  break
+done
+
+# Profile
+echo "Profile 0 : 422 Proxy"
+echo "Profile 1 : 422 LT"
+echo "Profile 2 : 422"
+echo "Profile 3 : 422 HQ"
+echo
+
+while :; do
+  read -ep "Please enter a Profile number from 0 to 3 from the list above... " profile
+  echo
+  [[ $profile =~ $isInteger ]] || { echo "The Proilfe must be an integer number. Please try again... "; echo; continue; }
+  if (($profile >= 0 && $profile <= 3)); then
+    break
+  else
+    echo "The Profile must be an integer between 0 and 3. Please try again... "
+    echo
+  fi
+done
+
+# Quality Scale
+while :; do
+  read -ep "Please enter the Quality Scale from 0 to 32 where 9 to 13 is sane... " qscale
+  echo
+  [[ $qscale =~ $isInteger ]] || { echo "The Quality Scale must be an integer number. Please try again... "; echo; continue; }
+  if (($qscale >= 0 && $qscale <= 32)); then
+    break
+  else
+    echo "The Quality Scale must be an integer between 0 and 32. Please try again... "
+    echo
+  fi
+done
+
+# List all files with supported video formats
+echo "Your media will be encoded with Profile ${profile} and Quality Scale ${qscale} at ${framerate} fps..."
+echo
+
 # Pause for input
 read -n 1 -s -r -p "Press any key to continue... "
 echo
@@ -73,7 +121,6 @@ fi
 
 mkdir "mov";
 
-
 # Re-encode supported video files with FFmpeg
 for i in *.{avi,mkv,mov,mp4,mxf}
 do
@@ -87,11 +134,11 @@ do
   # qscale 0-32 where zero is maximum quality and 9-13 are sane values
   ffmpeg -probesize 5000000 \
   -i "$i" \
-  -r 30 \
+  -r $framerate \
   -c:v prores_ks \
-  -profile:v 2 \
+  -profile:v $profile \
   -pix_fmt yuv422p10le \
-  -qscale:v 11 \
+  -qscale:v $qscale \
   -c:a pcm_s16le \
   -y "mov/${j}.mov" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 

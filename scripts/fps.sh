@@ -54,6 +54,7 @@ done
 # shopt -u nocaseglob
 
 # Regex for validating integers
+isInteger='^[0-9]+$'
 isNumeral='^[0-9]+([.][0-9]+)?$'
 
 # Framerate
@@ -64,8 +65,21 @@ while :; do
   break
 done
 
+# Constant Rate Factor
+while :; do
+  read -ep "Please enter the Constant Rate Factor from 0 to 51... " crf
+  echo
+  [[ $crf =~ $isInteger ]] || { echo "The Constant Rate Factor must be an integer number. Please try again... "; echo; continue; }
+  if (($crf >= 0 && $crf <= 51)); then
+    break
+  else
+    echo "The Constant Rate Factor must be an integer between 0 and 51. Please try again... "
+    echo
+  fi
+done
+
 # List all files with supported video formats
-echo "Your media will be re-encoded at ${framerate} fps..."
+echo "Your media will be re-encoded with CRF ${crf} at ${framerate} fps..."
 echo
 
 # Pause for input
@@ -103,7 +117,7 @@ do
   -r $framerate \
   -c:v libx264 \
   -preset slow \
-  -crf 18 \
+  -crf $crf \
   -y "mp4/${j}.mp4" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 
   echo; echo "${i} was re-encoded and saved as ${j}.mp4 in mp4"; echo;
