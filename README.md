@@ -22,4 +22,4 @@ fps.sh\
 Re-encodes Variable Frame Rate (VFR) media at a Constant Frame Rate (CFR) whilst maintaining audio sync. This script is helpful if you are having issues such as green or missing frames when editing media encoded with a VFR.
 
 ffv1.sh\
-Encodes media using the lossless FFV1 codec and saves it in a matroska container.
+Encodes media with a lossless FFV1 codec and saves it in an open source cross platform matroska container.
