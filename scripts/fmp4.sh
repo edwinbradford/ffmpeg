@@ -38,11 +38,13 @@ while :; do
   IFS="" read -r input
   echo
 
-  # Evaluate path variable for quotes and spaces for cd command
-  eval "input=( $input )"
-
-  # Use wslpath to convert Windows paths to Unix paths for WSL on Windows
+  # If on WSL use wslpath to convert windows paths to Unix
   if command -v wslpath >/dev/null 2>&1; then
+    # If the path is quoted and contains a space...
+    if [[ "$input" =~ ^\"(.*\ .*)\"$ ]]; then
+      # Remove the quotes
+      input="${BASH_REMATCH[1]}"
+    fi
     input="$( wslpath "$input" )"
   fi
 
