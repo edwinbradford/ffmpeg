@@ -1,5 +1,6 @@
-# ffshell
-ffshell is a collection of shell scripts that re-encode media using FFmpeg. They have been tested on macOS and Windows and should work on Unix. Windows users need to install bash either by installing Git Bash or Windows Subsystem for Linux (WSL) on Windows 10.
+# ffmpeg
+
+This project contains a collection of shell scripts that re-encode media using FFmpeg. They have been tested on macOS and Windows and should work on Unix. Windows users need to install bash either by installing Git Bash or Windows Subsystem for Linux (WSL) on Windows 10.
 
 The scripts are:
 
@@ -26,4 +27,4 @@ ffv1.sh\
 Encodes media with a lossless FFV1 codec and saves it in the open source and cross platform mkv matroska container.
 
 prores.sh\
-Encodes media using Apple's intraframe (spatial) ProRes family of codecs and saves it in an Apple mov container. As with dnxhd.sh above this script is intended for saving media in a high quality intraframe (spatial) format intended for importing into a video editor. DNxHD has now become the standard format for broadcast media but Apple ProRes is still common. 
+Encodes media using Apple's intraframe (spatial) ProRes family of codecs and saves it in an Apple mov container. As with dnxhd.sh above this script is intended for saving media in a high quality intraframe (spatial) format intended for importing into a video editor. DNxHD has now become the standard format for broadcast media but Apple ProRes is still common.
