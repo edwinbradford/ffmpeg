@@ -4,7 +4,7 @@
 echo; pwd; echo
 
 # Script title
-echo "This script uses FFmpeg to encode media in a lossless format and save it as cross platform *.mkv."; echo
+echo "This script uses FFmpeg to encode media with the ffmpeg version 1 lossless codec and save it in the cross platform *.mkv." format; echo
 
 # Check if FFmpeg exists
 echo "Checking for FFmpeg..."; echo;
@@ -89,6 +89,12 @@ do
   ffmpeg -i "$i" \
   -c:v ffv1 \
   -c:a copy \
+  -level 3 \
+  -g 1 \
+  -context 1 \
+  -coder 2 \
+  -slices 4 \
+  -slicecrc 1 \
   -y "mkv/${j}.mkv" || { echo; echo "FFmpeg could not finish for some reason."; echo; read -n 1 -s -r -p "Press any key to exit... "; exit 1; }
 
   echo; echo "${i} was encoded with FFV1 and saved as ${j}.mkv in 'mkv'."; echo;
