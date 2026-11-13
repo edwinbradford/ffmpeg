@@ -1,10 +1,7 @@
 #!/bin/bash
 
 # Script title
-echo "This script uses FFmpeg to archive media as lossless FFV1 and to restore it again."
-echo "  Archive: name.avi        -> name_ffv1.avi  (FFV1, same folder, same file type)"
-echo "  Restore: name_ffv1.avi   -> name.avi       (uncompressed, original pixel format)"
-echo
+echo; echo "This script uses FFmpeg to list media in uncompressed formats, encode it with the FFV1 codec, verify the encode exact matches the original and if so write the encode to a new file with a _ffv1.xxx suffix. Existing files with both the FFV1 codec and the _ffv1.xxx suffix are decoded back to the original format and the _ffv1.xxx suffix removed."; echo;
 
 # Check if FFmpeg exists
 echo "Checking for FFmpeg..."; echo
@@ -35,6 +32,40 @@ get_video() {
     | head -n 1
 }
 
+# Print a fingerprint (hash) of file $1's decoded video, converted to pixel format $2 (if
+# given), plus its decoded audio. Identical fingerprints mean identical pictures and sound.
+# Prints nothing (and returns 1) if the file cannot be decoded, so a failure can never
+# look like a match.
+fingerprint() {
+  local pix=() v a acount
+  [[ -n $2 ]] && pix=(-pix_fmt "$2")
+  v="$(ffmpeg -nostdin -v error -i "./$1" -map 0:v:0 "${pix[@]}" -fps_mode passthrough -f md5 - 2>/dev/null)"
+  [[ $v == MD5=* ]] || return 1
+  acount="$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "./$1" </dev/null 2>/dev/null | wc -l)"
+  a="none"
+  if (( acount > 0 )); then
+    a="$(ffmpeg -nostdin -v error -i "./$1" -map 0:a -f md5 - 2>/dev/null)"
+    [[ $a == MD5=* ]] || return 1
+  fi
+  echo "${v};${acount};${a}"
+}
+
+# Video codecs worth archiving as FFV1: uncompressed formats, where FFV1 saves a lot of space.
+# Anything else (H.264, HEVC, ProRes, ...) is left alone because re-encoding it to FFV1 would
+# only make it bigger. Names are as ffprobe reports them; add more here (space separated,
+# keep a space at each end) if you want other codecs included.
+archive_codecs=" rawvideo v210 v210x v308 v408 v410 r210 r10k avrp avui ayuv 012v y41p yuv4 "
+
+# Report files that were left out of the lists below (uses the variables set in the search)
+print_left_out() {
+  if (( skipped )); then
+    echo "${skipped} other file(s) were left out because their counterpart already exists."; echo
+  fi
+  if (( left_out_total )); then
+    echo "${left_out_total} file(s) were left out because of their video codec (${left_out_text}). Only uncompressed video is archived as FFV1, and only FFV1 files are restored."; echo
+  fi
+}
+
 # Remember where the script was launched so relative paths always resolve from here
 start_dir="$PWD"
 
@@ -42,7 +73,7 @@ start_dir="$PWD"
 while :; do
 
   # Source media
-  echo "Drag and drop the folder containing the media into this window, or type or paste its path (Tab completes), then press enter... or type [q] and press enter to quit."; echo
+  echo "Enter the path to synchronise and press enter or press [Q] to quit... "; echo
 
   # Check for supported media files
   while :; do
@@ -107,6 +138,9 @@ while :; do
     # The file name decides what happens to each file:
     #   name.avi       -> archive: encode to name_ffv1.avi  (skipped if that already exists)
     #   name_ffv1.avi  -> restore: decode to name.avi       (skipped if that already exists)
+    # ffprobe checks each file's video codec: only uncompressed codecs (see archive_codecs)
+    # are archived, and only genuine FFV1 files are restored. Everything else is counted
+    # by codec and reported, but never touched.
     # Nothing is ever overwritten. Also skipped: temporary files from an interrupted run,
     # a leftover 'mkv' folder from older versions of this script, hidden files and folders
     # (this also avoids macOS "._name.avi" junk files), and symlinks (so linked folders
@@ -115,6 +149,7 @@ while :; do
     files=()
     restore_files=()
     skipped=0
+    declare -A left_out=()
     while IFS= read -r -d '' f; do
       f="${f#./}"
       base="${f%.*}"
@@ -123,13 +158,25 @@ while :; do
         if [[ -e "${base%_ffv1}.${ext}" ]]; then
           (( skipped++ ))
         else
-          restore_files+=("$f")
+          codec="$(get_video "$f" codec_name)"
+          if [[ $codec == ffv1 ]]; then
+            restore_files+=("$f")
+          else
+            key="${codec:-unknown}"
+            left_out[$key]=$(( ${left_out[$key]:-0} + 1 ))
+          fi
         fi
       else
         if [[ -e "${base}_ffv1.${ext}" ]]; then
           (( skipped++ ))
         else
-          files+=("$f")
+          codec="$(get_video "$f" codec_name)"
+          if [[ -n $codec && $archive_codecs == *" $codec "* ]]; then
+            files+=("$f")
+          else
+            key="${codec:-unknown}"
+            left_out[$key]=$(( ${left_out[$key]:-0} + 1 ))
+          fi
         fi
       fi
     done < <(
@@ -137,6 +184,16 @@ while :; do
         \( -iname '*.avi' -o -iname '*.mkv' -o -iname '*.mov' \) \
         -print0 2>/dev/null | sort -z
     )
+
+    # Summarise files left out because of their codec, e.g. "2 x h264, 1 x prores"
+    left_out_total=0
+    left_out_text=""
+    if (( ${#left_out[@]} )); then
+      while IFS= read -r c; do
+        left_out_text+="${left_out_text:+, }${left_out[$c]} x ${c}"
+        (( left_out_total += left_out[$c] ))
+      done < <(printf '%s\n' "${!left_out[@]}" | sort)
+    fi
 
     if (( ${#files[@]} + ${#restore_files[@]} )); then
       if (( ${#files[@]} )); then
@@ -150,12 +207,11 @@ while :; do
         done
         echo
       fi
-      if (( skipped )); then
-        echo "${skipped} other file(s) were left out because their counterpart already exists."; echo
-      fi
+      print_left_out
       break
-    elif (( skipped )); then
-      echo "Nothing to do here: every file already has its archived or restored counterpart. Please try again, or type [q] to quit... "; echo
+    elif (( skipped || left_out_total )); then
+      print_left_out
+      echo "Nothing to do here. Please try again, or type [q] to quit... "; echo
     else
       echo "No supported media files found. Please try again, or type [q] to quit... "; echo
     fi
@@ -180,6 +236,7 @@ while :; do
   done
 
   created=()
+  failed=()
 
   # ARCHIVE: re-encode supported video files to FFV1 with FFmpeg
   for i in "${files[@]}"; do
@@ -223,6 +280,19 @@ while :; do
         exit 1
       }
 
+    # Verify before keeping: the decoded FFV1 video and audio must be bit-for-bit identical
+    # to the source's, compared in the source's own pixel format. A file that fails is
+    # deleted so a bad archive can never sit beside the only good copy.
+    echo; echo "Verifying that the FFV1 version is identical to ${i}... "
+    src_fp="$(fingerprint "$i" "$orig_pix")"
+    out_fp="$(fingerprint "$tmp" "$orig_pix")"
+    if [[ -z $src_fp || $src_fp != "$out_fp" ]]; then
+      rm -f -- "$tmp"
+      failed+=("$i")
+      echo; echo "VERIFICATION FAILED: the FFV1 version of ${i} did not match the original, so it was deleted. Keep the original."; echo
+      continue
+    fi
+
     mv -f -- "$tmp" "$out" || {
       echo >&2 "Could not save '$out'."; echo
       read -n 1 -s -r -p "Press any key to exit... "
@@ -230,7 +300,7 @@ while :; do
     }
 
     created+=("$out")
-    echo; echo "${i} was encoded with FFV1 and saved as ${out}."; echo
+    echo "Verified identical."; echo "${i} was encoded with FFV1 and saved as ${out}."; echo
 
   done
 
@@ -298,10 +368,20 @@ while :; do
 
   done
 
-  echo "The following files were created:"
-  echo
-  printf '%s\n' "${created[@]}"
-  echo
+  if (( ${#created[@]} )); then
+    echo "The following files were created:"
+    echo
+    printf '%s\n' "${created[@]}"
+    echo
+  fi
+
+  if (( ${#failed[@]} )); then
+    echo "WARNING: ${#failed[@]} file(s) FAILED verification. No FFV1 version was kept, so these originals must NOT be deleted:"
+    echo
+    printf '%s\n' "${failed[@]}"
+    echo
+  fi
+
   echo "Finished. Returning to folder selection..."; echo
 
 done
