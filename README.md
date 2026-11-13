@@ -1,6 +1,6 @@
 # ffmpeg
 
-This project contains a collection of shell scripts that re-encode media using FFmpeg. They have been tested on macOS and Windows and should work on Unix. Windows users need to install bash either by installing Git Bash or Windows Subsystem for Linux (WSL) on Windows 10.
+This project contains a collection of shell scripts that re-encode media using FFmpeg. Most have been tested on macOS and Windows. Windows users need to install bash either by installing Git Bash or Windows Subsystem for Linux (WSL) on Windows 10.
 
 The scripts are:
 
@@ -24,7 +24,7 @@ fps.sh\
 Designed to re-encode Variable Frame Rate (VFR) media with a Constant Frame Rate (CFR) maintain audio sync and save it as an mp4. This script is helpful if you are having green or missing frames issues with Variable Frame Rate source media.
 
 ffv1.sh\
-Encodes media with a lossless FFV1 codec and saves it in the open source and cross platform mkv matroska container.
+Lists and encodes uncompressed media with the lossless FFV1 codec, verifies the encode matches the original and restores files previously encoded with this script to the original uncompressed state.
 
 prores.sh\
 Encodes media using Apple's intraframe (spatial) ProRes family of codecs and saves it in an Apple mov container. As with dnxhd.sh above this script is intended for saving media in a high quality intraframe (spatial) format intended for importing into a video editor. DNxHD has now become the standard format for broadcast media but Apple ProRes is still common.
